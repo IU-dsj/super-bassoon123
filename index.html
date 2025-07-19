@@ -2,13 +2,37 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8"/>
-  <title>手机全屏签名</title>
+  <title>微信全屏签名</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
   <style>
-    html,body{margin:0;height:100%;display:flex;flex-direction:column;font-family:Arial}
-    #c{background:#fff;border:none;flex:1;cursor:crosshair}
-    #bar{background:#222;color:#fff;display:flex;justify-content:center;gap:10px;padding:8px}
-    button{padding:8px 14px;font-size:14px}
+    *{margin:0;padding:0;box-sizing:border-box}
+    html,body{height:100%;font-family:Arial}
+    #c{
+      display:block;
+      width:100vw;          /* 占满屏幕宽度 */
+      height:calc(100vh - 48px); /* 扣除底部按钮高度 48px */
+      background:#fff;
+      border:none;
+      cursor:crosshair;
+      touch-action:none;
+    }
+    #bar{
+      height:48px;
+      background:#222;
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:20px;
+    }
+    button{
+      padding:6px 12px;
+      font-size:14px;
+      border:none;
+      border-radius:4px;
+      background:#fff;
+      color:#222;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 </head>
@@ -20,14 +44,14 @@
   </div>
 
   <script>
-    /* 画布大小 = 视口大小 */
     const cvs = document.getElementById('c');
     const ctx = cvs.getContext('2d');
     let drawing = false;
 
+    /* 自适应分辨率 */
     function resize(){
       cvs.width  = window.innerWidth;
-      cvs.height = window.innerHeight - document.getElementById('bar').offsetHeight;
+      cvs.height = window.innerHeight - 48; /* 48px = 底部按钮高度 */
       ctx.lineWidth = 3;
       ctx.lineCap = ctx.lineJoin = 'round';
       ctx.strokeStyle = '#000';
