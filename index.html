@@ -2,66 +2,75 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8"/>
-  <title>手写签名板</title>
+  <title>手机全屏签名</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
   <style>
-    canvas{border:1px solid #999;}
-    button{margin:8px 4px 0 0;}
+    html,body{margin:0;height:100%;display:flex;flex-direction:column;font-family:Arial}
+    #c{background:#fff;border:none;flex:1;cursor:crosshair}
+    #bar{background:#222;color:#fff;display:flex;justify-content:center;gap:10px;padding:8px}
+    button{padding:8px 14px;font-size:14px}
   </style>
-  <!-- 1. 引入 EmailJS -->
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 </head>
 <body>
-  <h2>请在下框签名</h2>
-  <canvas id="c" width="400" height="200"></canvas>
-  <br/>
-  <button onclick="save()">保存为图片</button>
-  <button onclick="clearCanvas()">重写 / 清空</button>
-  <a id="dl" style="display:none">下载</a>
+  <canvas id="c"></canvas>
+  <div id="bar">
+    <button onclick="save()">保存并发送</button>
+    <button onclick="clearCanvas()">清空</button>
+  </div>
 
   <script>
-    /* 原有签名逻辑 */
+    /* 画布大小 = 视口大小 */
     const cvs = document.getElementById('c');
     const ctx = cvs.getContext('2d');
     let drawing = false;
 
-    ['mousedown','touchstart'].forEach(e=>cvs.addEventListener(e, ev=>{
+    function resize(){
+      cvs.width  = window.innerWidth;
+      cvs.height = window.innerHeight - document.getElementById('bar').offsetHeight;
+      ctx.lineWidth = 3;
+      ctx.lineCap = ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#000';
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    /* 统一鼠标/触摸事件 */
+    function getPos(ev){
+      const rect = cvs.getBoundingClientRect();
+      return {
+        x: (ev.clientX || ev.touches[0].clientX) - rect.left,
+        y: (ev.clientY || ev.touches[0].clientY) - rect.top
+      };
+    }
+    ['mousedown','touchstart'].forEach(evt => cvs.addEventListener(evt, ev=>{
       ev.preventDefault();
       drawing = true;
+      const {x,y} = getPos(ev);
       ctx.beginPath();
-      const rect = cvs.getBoundingClientRect();
-      const x = (ev.clientX || ev.touches[0].clientX) - rect.left;
-      const y = (ev.clientY || ev.touches[0].clientY) - rect.top;
       ctx.moveTo(x, y);
     }));
-    ['mousemove','touchmove'].forEach(e=>cvs.addEventListener(e, ev=>{
+    ['mousemove','touchmove'].forEach(evt => cvs.addEventListener(evt, ev=>{
       if(!drawing) return;
       ev.preventDefault();
-      const rect = cvs.getBoundingClientRect();
-      const x = (ev.clientX || ev.touches[0].clientX) - rect.left;
-      const y = (ev.clientY || ev.touches[0].clientY) - rect.top;
+      const {x,y} = getPos(ev);
       ctx.lineTo(x, y);
       ctx.stroke();
     }));
-    ['mouseup','touchend'].forEach(e=>window.addEventListener(e, ()=>drawing=false));
+    ['mouseup','touchend'].forEach(evt => window.addEventListener(evt, ()=>drawing=false));
 
+    /* 保存并发送 */
     function save(){
       const img = cvs.toDataURL('image/png');
-
-      // 1) 下载
-      const a = document.createElement('a');
-      a.href = img; a.download = 'signature.png'; a.click();
-
-      // 2) 发邮件
       emailjs.init("GzWnI9_DZ731pr1NO");
       emailjs.send("service_ie5vkns", "template_0nerq9o", {
         date: new Date().toLocaleString(),
         image: img
-      }).then(()=>console.log("邮件已发送"))
-        .catch(err=>console.error("邮件失败", err));
+      }).then(()=>alert('已发送邮箱'))
+        .catch(err=>alert(err));
     }
-
     function clearCanvas(){
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      ctx.clearRect(0,0,cvs.width,cvs.height);
     }
   </script>
 </body>
