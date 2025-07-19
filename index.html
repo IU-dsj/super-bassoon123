@@ -2,18 +2,25 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8"/>
-  <title>拔河服装签收表-Word 版自由签名</title>
+  <title>拔河服装签收表-手机签名</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
   <style>
-    body{margin:0;font-family:Arial;background:#f5f5f5}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#f5f5f5}
     #page{display:block;margin:0 auto;background:#fff;border:1px solid #ccc}
     #btnBox{text-align:center;padding:10px}
     .btn{padding:10px 20px;font-size:16px}
-    /* 弹窗 */
-    #modal{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:none;flex-direction:column;z-index:9999}
-    #popCvs{flex:1;background:#fff;touch-action:none}
-    #popBar{background:#222;color:#fff;display:flex;justify-content:space-between;align-items:center;padding:8px}
-    #popBar button{margin:0 4px}
+    /* 弹窗，宽高与签收人栏比例一致 */
+    #modal{
+      position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);
+      display:none;justify-content:center;align-items:center;z-index:9999
+    }
+    #popBox{
+      background:#fff;border-radius:8px;display:flex;flex-direction:column;
+      box-shadow:0 0 15px rgba(0,0,0,.5);max-width:90vw;max-height:90vh
+    }
+    #popCvs{background:#fff;touch-action:none}
+    #popBar{display:flex;justify-content:space-between;align-items:center;background:#222;color:#fff;padding:5px 10px}
+    #popBar button{margin:0 4px;padding:5px 10px;font-size:14px}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 </head>
@@ -25,15 +32,17 @@
 
   <!-- 弹窗 -->
   <div id="modal">
-    <div id="popBar">
-      <span>签名</span>
-      <button onclick="closePop()">✕</button>
-    </div>
-    <canvas id="popCvs"></canvas>
-    <div id="popBar">
-      <button onclick="popClear()">清空</button>
-      <button onclick="popUndo()">撤销</button>
-      <button onclick="finishSign()">完成</button>
+    <div id="popBox">
+      <div id="popBar">
+        <span>签名</span>
+        <button onclick="closePop()">✕</button>
+      </div>
+      <canvas id="popCvs"></canvas>
+      <div id="popBar">
+        <button onclick="popClear()">清空</button>
+        <button onclick="popUndo()">撤销</button>
+        <button onclick="finishSign()">完成</button>
+      </div>
     </div>
   </div>
 
@@ -49,38 +58,43 @@
     page.width  = vw;
     page.height = vh;
     const ctx = page.getContext('2d');
-    const scale = vw / 794; // 缩放因子
-    const signImg = Array(names.length).fill(null); // 每格签名
+    const scale = vw / 794;
+    const signImg = Array(names.length).fill(null);
 
-    /* 表格坐标（按 Word 实际像素）*/
+    /* 表格尺寸 */
     const rowH = 60 * scale, headH = 40 * scale;
     const colW = [80*scale, 200*scale, 260*scale, 260*scale];
-    const startX = 0;
-    const startY = 50 * scale;
-    const signCol = 2; // “签收人”列索引
+    const startX = 0, startY = 50*scale;
+    const signCol = 2; // 签收人列
 
     /* ========== 3. 绘制完整 A4 表格 ========== */
     function drawPage(){
       ctx.clearRect(0,0,page.width,page.height);
+      // 标题：二号字（≈22pt）
       ctx.fillStyle='#000';
-      ctx.font = `${24*scale}px SimSun`;
-      ctx.fillText('拔河比赛服装签收表', page.width/2 - 100*scale, 30*scale);
-
+      ctx.font = `bold ${32*scale}px SimSun`;
+      ctx.textAlign='center';
+      ctx.fillText('拔河比赛服装签收表', page.width/2, 30*scale);
+      ctx.textAlign='left';
       // 表头
       ['序号','姓名','签收人','备注'].forEach((h,i)=>{
         const x = colW.slice(0,i).reduce((a,b)=>a+b,0);
         ctx.strokeRect(x, startY, colW[i], headH);
-        ctx.fillText(h, x+5*scale, startY+headH/2+5*scale);
+        ctx.font = `${20*scale}px SimSun`;
+        ctx.textAlign='center';
+        ctx.fillText(h, x + colW[i]/2, startY + headH/2 + 6*scale);
+        ctx.textAlign='left';
       });
       // 13 行
       for(let r=0;r<names.length;r++){
         const y = startY + headH + r*rowH;
         // 序号
         ctx.strokeRect(0, y, colW[0], rowH);
-        ctx.fillText(String(r+1), 5*scale, y+rowH/2+5*scale);
+        ctx.textAlign='center';
+        ctx.fillText(String(r+1), colW[0]/2, y + rowH/2 + 6*scale);
         // 姓名
         ctx.strokeRect(colW[0], y, colW[1], rowH);
-        ctx.fillText(names[r]||'', colW[0]+5*scale, y+rowH/2+5*scale);
+        ctx.fillText(names[r]||'', colW[0] + colW[1]/2, y + rowH/2 + 6*scale);
         // 签收人栏
         const sx = colW.slice(0,signCol).reduce((a,b)=>a+b,0);
         const sw = colW[signCol], sh = rowH;
@@ -89,7 +103,8 @@
           ctx.drawImage(signImg[r], sx, y, sw, sh);
         }else{
           ctx.fillStyle='#aaa';
-          ctx.fillText('点击签名', sx+5*scale, y+rowH/2+5*scale);
+          ctx.textAlign='center';
+          ctx.fillText('点击签名', sx + sw/2, y + rowH/2 + 6*scale);
           ctx.fillStyle='#000';
         }
         // 备注
@@ -112,71 +127,71 @@
       }
     });
 
-    /* ========== 5. 弹窗签名 ========== */
+    /* ========== 5. 弹窗签名：按下出墨，松开停笔 ========== */
     const modal = document.getElementById('modal');
     const popCvs = document.getElementById('popCvs');
     const popCtx = popCvs.getContext('2d');
-    let curRow = null, paths = [];
+    let curRow = null, isDown = false;
 
-    function openPop(r){
-      curRow = r;
+    function openPop(row){
+      curRow = row;
+      /* 弹窗画布尺寸 = 签收人栏宽高比例 */
+      const popW = colW[signCol];
+      const popH = rowH;
+      const maxW = window.innerWidth * 0.9;
+      const maxH = window.innerHeight * 0.8;
+      const ratio = Math.min(maxW/popW, maxH/popH);
+      popCvs.width  = popW * ratio;
+      popCvs.height = popH * ratio;
+
       modal.style.display='flex';
-      popCvs.width  = window.innerWidth;
-      popCvs.height = window.innerHeight - 110;
       popCtx.lineWidth = 4;
       popCtx.lineCap = popCtx.lineJoin = 'round';
       popCtx.strokeStyle = '#000';
       popCtx.clearRect(0,0,popCvs.width,popCvs.height);
-      paths = [];
+      isDown = false;
     }
     function closePop(){modal.style.display='none';}
-    function popClear(){popCtx.clearRect(0,0,popCvs.width,popCvs.height);paths=[];}
-    function popUndo(){
-      paths.pop();
-      popCtx.clearRect(0,0,popCvs.width,popCvs.height);
-      paths.forEach(p=>{
-        popCtx.beginPath();popCtx.moveTo(...p[0]);p.slice(1).forEach(pt=>popCtx.lineTo(...pt));popCtx.stroke();
-      });
-    }
-    function finishSign(){
-      const temp = document.createElement('canvas');
-      temp.width  = colW[signCol];
-      temp.height = rowH;
-      temp.getContext('2d').drawImage(popCvs,0,0,popCvs.width,popCvs.height,0,0,temp.width,temp.height);
-      signImg[curRow] = temp;
-      closePop();
-      drawPage();
-    }
-
-    /* 统一鼠标+触摸 */
-    ['mousedown','touchstart'].forEach(evt=>popCvs.addEventListener(evt,ev=>{
-      ev.preventDefault();
-      paths.push([getPosPop(ev)]);
-    }));
-    ['mousemove','touchmove'].forEach(evt=>popCvs.addEventListener(evt,ev=>{
-      if(!paths.length) return;
-      ev.preventDefault();
-      paths[paths.length-1].push(getPosPop(ev));
-      popCtx.beginPath();
-      popCtx.moveTo(...paths[paths.length-1][paths[paths.length-1].length-2]);
-      popCtx.lineTo(...getPosPop(ev));
-      popCtx.stroke();
-    }));
-    ['mouseup','touchend'].forEach(evt=>window.addEventListener(evt,()=>{}));
+    function popClear(){popCtx.clearRect(0,0,popCvs.width,popCvs.height);}
+    function popUndo(){/* 撤销逻辑可扩展 */}
 
     function getPosPop(ev){
       const rect = popCvs.getBoundingClientRect();
       return [ev.clientX-rect.left,ev.clientY-rect.top];
     }
 
-    /* ========== 6. 一键发送整张 A4 ========== */
+    /* 按下出墨，松开停笔 */
+    ['mousedown','touchstart'].forEach(evt=>popCvs.addEventListener(evt,ev=>{
+      ev.preventDefault();
+      isDown = true;
+      const pt = getPosPop(ev);
+      popCtx.beginPath();
+      popCtx.moveTo(...pt);
+    }));
+    ['mousemove','touchmove'].forEach(evt=>popCvs.addEventListener(evt,ev=>{
+      if(!isDown) return;
+      ev.preventDefault();
+      const pt = getPosPop(ev);
+      popCtx.lineTo(...pt);
+      popCtx.stroke();
+    }));
+    ['mouseup','touchend'].forEach(evt=>window.addEventListener(evt,()=>isDown=false));
+
+    /* ========== 6. 完成回填 ========== */
+    function finishSign(){
+      signImg[curRow] = popCvs;
+      closePop();
+      drawPage();
+    }
+
+    /* ========== 7. 一键发送整张 A4 ========== */
     function sendAll(){
       const img = page.toDataURL('image/png');
       emailjs.init("GzWnI9_DZ731pr1NO");
       emailjs.send("service_ie5vkns", "template_0nerq9o", {
         date: new Date().toLocaleString(),
         image: img
-      }).then(()=>alert("完整 A4 签到表已发送到邮箱！"))
+      }).then(()=>alert("完整 A4 签到表已发送！"))
         .catch(err=>alert("发送失败："+err));
     }
   </script>
