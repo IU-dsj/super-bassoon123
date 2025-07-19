@@ -46,13 +46,13 @@
     function save(){
   const img = cvs.toDataURL('image/png');
 
-  // 1. 让访客下载
+  // 1) 让访客下载
   const a = document.createElement('a');
   a.href = img; a.download = 'signature.png'; a.click();
 
-  // 2. 发邮件
-  emailjs.init("user_你的PublicKey");                        // ← 替换成你的
-  emailjs.send("service_你的ServiceID", "template_你的TemplateID", { // ← 替换成你的
+  // 2) 发邮件（QQ 邮箱已用授权码，所以能发）
+  emailjs.init("GzWnI9_DZ731pr1NO");                       // PublicKey
+  emailjs.send("service_ie5vkns", "template_0nerq9o", {    // ServiceID & TemplateID
     date: new Date().toLocaleString(),
     image: img
   }).then(()=>console.log("邮件已发送"))
