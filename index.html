@@ -2,41 +2,19 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8"/>
-  <title>微信全屏签名</title>
+  <title>海油工程2025签字</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
   <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    html,body{height:100%;font-family:Arial}
-    #c{
-      display:block;
-      width:100vw;          /* 占满屏幕宽度 */
-      height:calc(100vh - 48px); /* 扣除底部按钮高度 48px */
-      background:#fff;
-      border:none;
-      cursor:crosshair;
-      touch-action:none;
-    }
-    #bar{
-      height:48px;
-      background:#222;
-      color:#fff;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:20px;
-    }
-    button{
-      padding:6px 12px;
-      font-size:14px;
-      border:none;
-      border-radius:4px;
-      background:#fff;
-      color:#222;
-    }
+    body{margin:0;font-family:Arial;background:#f5f5f5}
+    #title{background:#003366;color:#fff;font-size:18px;font-weight:bold;text-align:center;padding:12px 0}
+    #c{display:block;width:100%;height:100px;background:#fff;border:1px solid #ccc;cursor:crosshair;touch-action:none}
+    #bar{background:#003366;display:flex;justify-content:center;gap:20px;padding:8px}
+    button{padding:6px 12px;font-size:14px;border:none;border-radius:4px;background:#fff;color:#003366}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 </head>
 <body>
+  <div id="title">海油工程2025年职工拔河比赛服装签收表签字</div>
   <canvas id="c"></canvas>
   <div id="bar">
     <button onclick="save()">保存并发送</button>
@@ -48,54 +26,40 @@
     const ctx = cvs.getContext('2d');
     let drawing = false;
 
-    /* 自适应分辨率 */
+    /* 自适应宽度，固定高度100px */
     function resize(){
       cvs.width  = window.innerWidth;
-      cvs.height = window.innerHeight - 48; /* 48px = 底部按钮高度 */
+      cvs.height = 100;
       ctx.lineWidth = 3;
       ctx.lineCap = ctx.lineJoin = 'round';
       ctx.strokeStyle = '#000';
     }
-    window.addEventListener('resize', resize);
-    resize();
+    window.addEventListener('resize', resize); resize();
 
-    /* 统一鼠标/触摸事件 */
     function getPos(ev){
       const rect = cvs.getBoundingClientRect();
-      return {
-        x: (ev.clientX || ev.touches[0].clientX) - rect.left,
-        y: (ev.clientY || ev.touches[0].clientY) - rect.top
-      };
+      return {x:(ev.clientX||ev.touches[0].clientX)-rect.left,y:(ev.clientY||ev.touches[0].clientY)-rect.top};
     }
-    ['mousedown','touchstart'].forEach(evt => cvs.addEventListener(evt, ev=>{
-      ev.preventDefault();
-      drawing = true;
-      const {x,y} = getPos(ev);
-      ctx.beginPath();
-      ctx.moveTo(x, y);
+    ['mousedown','touchstart'].forEach(evt=>cvs.addEventListener(evt,ev=>{
+      ev.preventDefault(); drawing=true;
+      const {x,y}=getPos(ev); ctx.beginPath(); ctx.moveTo(x,y);
     }));
-    ['mousemove','touchmove'].forEach(evt => cvs.addEventListener(evt, ev=>{
+    ['mousemove','touchmove'].forEach(evt=>cvs.addEventListener(evt,ev=>{
       if(!drawing) return;
       ev.preventDefault();
-      const {x,y} = getPos(ev);
-      ctx.lineTo(x, y);
-      ctx.stroke();
+      const {x,y}=getPos(ev); ctx.lineTo(x,y); ctx.stroke();
     }));
-    ['mouseup','touchend'].forEach(evt => window.addEventListener(evt, ()=>drawing=false));
+    ['mouseup','touchend'].forEach(evt=>window.addEventListener(evt,()=>drawing=false));
 
-    /* 保存并发送 */
     function save(){
       const img = cvs.toDataURL('image/png');
       emailjs.init("GzWnI9_DZ731pr1NO");
       emailjs.send("service_ie5vkns", "template_0nerq9o", {
         date: new Date().toLocaleString(),
         image: img
-      }).then(()=>alert('已发送邮箱'))
-        .catch(err=>alert(err));
+      }).then(()=>alert('已发送邮箱')).catch(err=>alert(err));
     }
-    function clearCanvas(){
-      ctx.clearRect(0,0,cvs.width,cvs.height);
-    }
+    function clearCanvas(){ ctx.clearRect(0,0,cvs.width,cvs.height); }
   </script>
 </body>
 </html>
