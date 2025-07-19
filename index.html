@@ -2,66 +2,120 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8"/>
-  <title>手写签名板</title>
+  <title>拔河服装签收表-自由签名</title>
   <style>
-    canvas{border:1px solid #999;}
-    button{margin:8px 4px 0 0;}
+    body{font-family:Arial;margin:10px}
+    canvas{border:1px solid #999;cursor:pointer}
+    .info{font-size:16px;margin:8px 0}
+    .done{color:#0a0}
+    button{margin:4px}
   </style>
-  <!-- 1. 引入 EmailJS -->
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 </head>
 <body>
-  <h2>请在下框签名</h2>
-  <canvas id="c" width="400" height="200"></canvas>
+  <h2>拔河比赛服装签收表 - 自由签名</h2>
+  <div class="info">点击 <b>“签收人”</b> 栏即可开始签名，无顺序限制</div>
+  <canvas id="c" width="1123" height="794"></canvas>
   <br/>
-  <button onclick="save()">保存为图片</button>
-  <button onclick="clearCanvas()">重写 / 清空</button>
-  <a id="dl" style="display:none">下载</a>
+  <button onclick="sendAll()">全部完成并发送</button>
 
   <script>
-    /* 原有签名逻辑 */
+    /* ========== 1. 配置 ========== */
+    const names = ['张三','李四','王二','麻子','','','','','','','','','']; // 13 人
+    const toEmail = '2258559275@qq.com';                                   // 改邮箱
+
+    /* ========== 2. 画布 & 数据 ========== */
     const cvs = document.getElementById('c');
     const ctx = cvs.getContext('2d');
-    let drawing = false;
+    const colW = [80,200,260,260], rowH = 50, startX = 50, startY = 80;
+    const signCells = []; // 保存每个“签收人”栏的签名路径
 
-    ['mousedown','touchstart'].forEach(e=>cvs.addEventListener(e, ev=>{
+    /* ========== 3. 初始化表格 ========== */
+    function drawTable(){
+      ctx.clearRect(0,0,cvs.width,cvs.height);
+      ctx.font = '20px SimSun';
+      ctx.fillText('拔河比赛服装签收表', 450, 30);
+      // 表头
+      ['序号','姓名','签收人','备注'].forEach((txt,i)=>{
+        const x = startX + colW.slice(0,i).reduce((a,b)=>a+b,0);
+        ctx.strokeRect(x, startY, colW[i], 40);
+        ctx.fillText(txt, x+10, startY+25);
+      });
+      // 13 行
+      for(let r=0;r<13;r++){
+        const y = startY + 40 + r*rowH;
+        // 序号
+        ctx.strokeRect(startX, y, colW[0], rowH);
+        ctx.fillText(String(r+1), startX+10, y+30);
+        // 姓名
+        ctx.strokeRect(startX+colW[0], y, colW[1], rowH);
+        ctx.fillText(names[r] || '', startX+colW[0]+10, y+30);
+        // 签收人栏（可签）
+        const signX = startX + colW[0] + colW[1];
+        ctx.strokeRect(signX, y, colW[2], rowH);
+        // 备注
+        ctx.strokeRect(signX+colW[2], y, colW[3], rowH);
+
+        // 记录该区域信息
+        signCells.push({x:signX, y, w:colW[2], h:rowH, index:r, drawn:false});
+      }
+      // 把已签的再画一次
+      signCells.forEach(cell=>{
+        if(cell.drawn){
+          ctx.strokeStyle='#f00';
+          ctx.lineWidth=2;
+          ctx.strokeRect(cell.x, cell.y, cell.w, cell.h);
+          ctx.strokeStyle='#000';
+          ctx.lineWidth=1;
+        }
+      });
+    }
+    drawTable();
+
+    /* ========== 4. 鼠标/触摸事件 ========== */
+    function getPos(ev){
+      const rect = cvs.getBoundingClientRect();
+      return {x: ev.clientX - rect.left, y: ev.clientY - rect.top};
+    }
+    function hitCell(px,py){
+      return signCells.find(c=> px>=c.x && px<=c.x+c.w && py>=c.y && py<=c.y+c.h);
+    }
+
+    let curCell = null;
+    ['mousedown','touchstart'].forEach(evt=>cvs.addEventListener(evt,ev=>{
+      const {x,y} = getPos(ev);
+      const cell = hitCell(x,y);
+      if(!cell) return;
       ev.preventDefault();
-      drawing = true;
+      curCell = cell;
       ctx.beginPath();
-      const rect = cvs.getBoundingClientRect();
-      const x = (ev.clientX || ev.touches[0].clientX) - rect.left;
-      const y = (ev.clientY || ev.touches[0].clientY) - rect.top;
-      ctx.moveTo(x, y);
+      ctx.moveTo(x,y);
     }));
-    ['mousemove','touchmove'].forEach(e=>cvs.addEventListener(e, ev=>{
-      if(!drawing) return;
+    ['mousemove','touchmove'].forEach(evt=>cvs.addEventListener(evt,ev=>{
+      if(!curCell) return;
+      const {x,y} = getPos(ev);
+      if(!hitCell(x,y)) return; // 禁止画出框
       ev.preventDefault();
-      const rect = cvs.getBoundingClientRect();
-      const x = (ev.clientX || ev.touches[0].clientX) - rect.left;
-      const y = (ev.clientY || ev.touches[0].clientY) - rect.top;
-      ctx.lineTo(x, y);
+      ctx.lineTo(x,y);
       ctx.stroke();
     }));
-    ['mouseup','touchend'].forEach(e=>window.addEventListener(e, ()=>drawing=false));
+    ['mouseup','touchend'].forEach(evt=>window.addEventListener(evt,()=>{
+      if(curCell){
+        curCell.drawn = true;
+        curCell = null;
+        drawTable(); // 重画把红框标上
+      }
+    }));
 
-    function save(){
+    /* ========== 5. 一键发送整张表 ========== */
+    function sendAll(){
       const img = cvs.toDataURL('image/png');
-
-      // 1) 下载
-      const a = document.createElement('a');
-      a.href = img; a.download = 'signature.png'; a.click();
-
-      // 2) 发邮件
       emailjs.init("GzWnI9_DZ731pr1NO");
       emailjs.send("service_ie5vkns", "template_0nerq9o", {
         date: new Date().toLocaleString(),
         image: img
-      }).then(()=>console.log("邮件已发送"))
-        .catch(err=>console.error("邮件失败", err));
-    }
-
-    function clearCanvas(){
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
+      }).then(()=>alert("签到表已发送到邮箱！"))
+        .catch(err=>alert("发送失败："+err));
     }
   </script>
 </body>
