@@ -1,30 +1,68 @@
-function sendAll(){
-  const img = page.toDataURL('image/png');
-  const blob = dataURLtoBlob(img);
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <title>手写签名板</title>
+  <style>
+    canvas{border:1px solid #999;}
+    button{margin:8px 4px 0 0;}
+  </style>
+  <!-- 1. 引入 EmailJS -->
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+</head>
+<body>
+  <h2>请在下框签名</h2>
+  <canvas id="c" width="400" height="200"></canvas>
+  <br/>
+  <button onclick="save()">保存为图片</button>
+  <button onclick="clearCanvas()">重写 / 清空</button>
+  <a id="dl" style="display:none">下载</a>
 
-  const fd = new FormData();
-  fd.append('image', blob);
+  <script>
+    /* 原有签名逻辑 */
+    const cvs = document.getElementById('c');
+    const ctx = cvs.getContext('2d');
+    let drawing = false;
 
-  fetch('http://你的域名.com:3000/upload', {method:'POST', body:fd})
-    .then(r=>r.json())
-    .then(data=>{
-      const link = data.url;
-      // 可选：EmailJS 把下载链接发邮件
+    ['mousedown','touchstart'].forEach(e=>cvs.addEventListener(e, ev=>{
+      ev.preventDefault();
+      drawing = true;
+      ctx.beginPath();
+      const rect = cvs.getBoundingClientRect();
+      const x = (ev.clientX || ev.touches[0].clientX) - rect.left;
+      const y = (ev.clientY || ev.touches[0].clientY) - rect.top;
+      ctx.moveTo(x, y);
+    }));
+    ['mousemove','touchmove'].forEach(e=>cvs.addEventListener(e, ev=>{
+      if(!drawing) return;
+      ev.preventDefault();
+      const rect = cvs.getBoundingClientRect();
+      const x = (ev.clientX || ev.touches[0].clientX) - rect.left;
+      const y = (ev.clientY || ev.touches[0].clientY) - rect.top;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }));
+    ['mouseup','touchend'].forEach(e=>window.addEventListener(e, ()=>drawing=false));
+
+    function save(){
+      const img = cvs.toDataURL('image/png');
+
+      // 1) 下载
+      const a = document.createElement('a');
+      a.href = img; a.download = 'signature.png'; a.click();
+
+      // 2) 发邮件
       emailjs.init("GzWnI9_DZ731pr1NO");
       emailjs.send("service_ie5vkns", "template_0nerq9o", {
         date: new Date().toLocaleString(),
-        download_link: link
-      });
-    })
-    .catch(err=>alert(err));
-}
+        image: img
+      }).then(()=>console.log("邮件已发送"))
+        .catch(err=>console.error("邮件失败", err));
+    }
 
-function dataURLtoBlob(dataURL){
-  const [head, base64] = dataURL.split(',');
-  const byteString = atob(base64);
-  const mime = head.split(':')[1].split(';')[0];
-  const ab = new ArrayBuffer(byteString.length);
-  const ia = new Uint8Array(ab);
-  for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
-  return new Blob([ab], {type: mime});
-}
+    function clearCanvas(){
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+    }
+  </script>
+</body>
+</html>
