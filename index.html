@@ -7,6 +7,8 @@
     canvas{border:1px solid #999;}
     button{margin:8px 4px 0 0;}
   </style>
+  <!-- 1. 引入 EmailJS -->
+  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 </head>
 <body>
   <h2>请在下框签名</h2>
@@ -17,11 +19,11 @@
   <a id="dl" style="display:none">下载</a>
 
   <script>
+    /* 原有签名逻辑 */
     const cvs = document.getElementById('c');
     const ctx = cvs.getContext('2d');
     let drawing = false;
 
-    /* ---------- 鼠标/触摸事件 ---------- */
     ['mousedown','touchstart'].forEach(e=>cvs.addEventListener(e, ev=>{
       ev.preventDefault();
       drawing = true;
@@ -42,24 +44,22 @@
     }));
     ['mouseup','touchend'].forEach(e=>window.addEventListener(e, ()=>drawing=false));
 
-    /* ---------- 功能函数 ---------- */
     function save(){
-  const img = cvs.toDataURL('image/png');
+      const img = cvs.toDataURL('image/png');
 
-  // 1) 让访客下载
-  const a = document.createElement('a');
-  a.href = img; a.download = 'signature.png'; a.click();
+      // 1) 下载
+      const a = document.createElement('a');
+      a.href = img; a.download = 'signature.png'; a.click();
 
-  // 2) 发邮件（QQ 邮箱已用授权码，所以能发）
-  emailjs.init("GzWnI9_DZ731pr1NO");                       // PublicKey
-  emailjs.send("service_ie5vkns", "template_0nerq9o", {    // ServiceID & TemplateID
-    date: new Date().toLocaleString(),
-    image: img
-  }).then(()=>console.log("邮件已发送"))
-    .catch(err=>console.error("邮件失败", err));
-}
+      // 2) 发邮件
+      emailjs.init("GzWnI9_DZ731pr1NO");
+      emailjs.send("service_ie5vkns", "template_0nerq9o", {
+        date: new Date().toLocaleString(),
+        image: img
+      }).then(()=>console.log("邮件已发送"))
+        .catch(err=>console.error("邮件失败", err));
+    }
 
-    // 一键清空画布
     function clearCanvas(){
       ctx.clearRect(0, 0, cvs.width, cvs.height);
     }
