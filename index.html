@@ -2,37 +2,32 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8"/>
-  <title>拔河服装签收表-手机签名</title>
+  <title>手机签到签名</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
   <style>
     body{margin:0;font-family:Arial}
-    #c{background:#fff;border:1px solid #ccc}
-    .info{padding:8px;font-size:16px}
+    canvas{border:1px solid #ccc;background:#fff}
+    .info{padding:10px;font-size:16px}
     button{padding:10px 20px;margin:4px;font-size:16px}
-    /* 弹窗 */
-    #modal{
-      position:fixed;top:0;left:0;width:100%;height:100%;
-      background:#000;display:none;flex-direction:column;z-index:9999
-    }
-    #popCanvas{background:#fff;flex:1;touch-action:none}
-    #popBar{background:#222;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:8px}
-    #popBar button{margin:0 4px}
+    #modal{position:fixed;top:0;left:0;width:100%;height:100%;background:#000;display:none;flex-direction:column;z-index:9999}
+    #popCanvas{flex:1;background:#fff;touch-action:none}
+    #popBar{background:#222;color:#fff;display:flex;justify-content:space-between;align-items:center;padding:8px}
   </style>
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
 </head>
 <body>
-  <div class="info">点击“签收人”区域即可全屏签名，全部完成后发送</div>
-  <canvas id="c" width="800" height="1100"></canvas>
+  <div class="info">点击“签收人”栏即可签名，全部完成后发送</div>
+  <canvas id="mainCvs" width="800" height="1100"></canvas>
   <button onclick="sendAll()">全部完成并发送</button>
 
   <!-- 弹窗 -->
   <div id="modal">
-    <div id="popBar">
-      <span id="popTitle">签名</span>
+    <div style="display:flex;justify-content:space-between;align-items:center;background:#222;color:#fff;padding:8px">
+      <span>签名</span>
       <button onclick="closePop()">✕</button>
     </div>
-    <canvas id="popCanvas"></canvas>
-    <div id="popBar">
+    <canvas id="popCvs"></canvas>
+    <div style="display:flex;justify-content:center;gap:10px;background:#222;padding:8px">
       <button onclick="popClear()">清空</button>
       <button onclick="popUndo()">撤销</button>
       <button onclick="finishSign()">完成</button>
@@ -40,144 +35,118 @@
   </div>
 
   <script>
-    /* ========== 1. 配置 ========== */
-    const names = ['张三','李四','王二','麻子','','','','','','','','','']; // 13 人
-    const toEmail = '2258559275@qq.com';
-    const colW = [80,200,260,260], rowH = 80, startX = 50, startY = 80;
-    const CELL_X = startX + colW[0] + colW[1]; // “签收人”栏起始 x
-    const CELL_W = colW[2], CELL_H = rowH;
+    /* ========== 配置 ========== */
+    const names = ['张三','李四','王二','麻子','','','','','','','','',''];
+    const COL_X = 330, COL_W = 260, ROW_H = 80, START_Y = 120;
+    const signData = Array(names.length).fill(null);
 
-    /* ========== 2. 主画布 ========== */
-    const cvs = document.getElementById('c');
-    const ctx = cvs.getContext('2d');
-    const signData = Array(names.length).fill(null); // 存储每个签名
-
-    /* ========== 3. 绘制签到表 ========== */
+    /* ========== 主画布 ========== */
+    const mainCvs = document.getElementById('mainCvs');
+    const mainCtx = mainCvs.getContext('2d');
     function drawTable(){
-      ctx.clearRect(0,0,cvs.width,cvs.height);
-      ctx.font = '24px SimSun';
-      ctx.fillText('拔河比赛服装签收表', 280, 40);
-      // 表头
-      ['序号','姓名','签收人','备注'].forEach((txt,i)=>{
-        const x = startX + colW.slice(0,i).reduce((a,b)=>a+b,0);
-        ctx.strokeRect(x, startY, colW[i], 40);
-        ctx.fillText(txt, x+10, startY+25);
+      mainCtx.clearRect(0,0,mainCvs.width,mainCvs.height);
+      mainCtx.font = '24px SimSun';
+      mainCtx.fillText('拔河比赛服装签收表',300,60);
+      const heads = ['序号','姓名','签收人','备注'];
+      heads.forEach((h,i)=>{
+        const x = [50,130,330,590][i];
+        const w = [80,200,260,260][i];
+        mainCtx.strokeRect(x,START_Y-40,w,40);
+        mainCtx.fillText(h,x+10,START_Y-15);
       });
-      // 13 行
       for(let r=0;r<13;r++){
-        const y = startY + 40 + r*rowH;
+        const y = START_Y + r*ROW_H;
         // 序号
-        ctx.strokeRect(startX, y, colW[0], rowH);
-        ctx.fillText(String(r+1), startX+10, y+50);
+        mainCtx.strokeRect(50,y,80,ROW_H);
+        mainCtx.fillText(String(r+1),60,y+50);
         // 姓名
-        ctx.strokeRect(startX+colW[0], y, colW[1], rowH);
-        ctx.fillText(names[r] || '', startX+colW[0]+10, y+50);
-        // 签收人栏
-        const sx = CELL_X, sy = y, sw = CELL_W, sh = CELL_H;
-        ctx.strokeRect(sx, sy, sw, sh);
-        // 已签则画
+        mainCtx.strokeRect(130,y,200,ROW_H);
+        mainCtx.fillText(names[r]||'',140,y+50);
+        // 签收人
+        mainCtx.strokeRect(COL_X,y,COL_W,ROW_H);
         if(signData[r]){
-          ctx.drawImage(signData[r], sx, sy, sw, sh);
+          mainCtx.drawImage(signData[r],COL_X,y,COL_W,ROW_H);
         }else{
-          ctx.fillStyle='#aaa';ctx.fillText('点击签名', sx+10, y+50);ctx.fillStyle='#000';
+          mainCtx.fillStyle='#aaa';mainCtx.fillText('点击签名',COL_X+10,y+50);mainCtx.fillStyle='#000';
         }
         // 备注
-        ctx.strokeRect(sx+sw, y, colW[3], rowH);
+        mainCtx.strokeRect(590,y,260,ROW_H);
       }
     }
     drawTable();
 
-    /* ========== 4. 点击区域检测 ========== */
-    function getPos(ev){
-      const rect = cvs.getBoundingClientRect();
-      return {x: ev.clientX-rect.left, y: ev.clientY-rect.top};
-    }
-    cvs.addEventListener('click', ev=>{
-      const {x,y} = getPos(ev);
-      for(let r=0;r<13;r++){
-        const sy = startY + 40 + r*rowH;
-        if(x>=CELL_X && x<=CELL_X+CELL_W && y>=sy && y<=sy+CELL_H){
-          openPop(r); // 打开弹窗
-          break;
-        }
-      }
-    });
+    /* ========== 弹窗画布 ========== */
+    const modal = document.getElementById('modal');
+    const popCvs = document.getElementById('popCvs');
+    const popCtx = popCvs.getContext('2d');
+    let curRow = null, popPaths = [];
 
-    /* ========== 5. 弹窗画布 ========== */
-    const modal   = document.getElementById('modal');
-    const popCvs  = document.getElementById('popCanvas');
-    const popCtx  = popCvs.getContext('2d');
-    let popDrawing = false, curRow = null, popPaths = [];
-
-    function openPop(row){
-      curRow = row;
-      modal.style.display = 'flex';
-      popCvs.width  = window.innerWidth;
-      popCvs.height = window.innerHeight - 90;
+    function openPop(r){
+      curRow = r;
+      modal.style.display='flex';
+      popCvs.width = window.innerWidth;
+      popCvs.height = window.innerHeight - 110;
       popCtx.lineWidth = 4;
-      popCtx.lineCap   = 'round';
+      popCtx.lineCap = popCtx.lineJoin = 'round';
       popCtx.strokeStyle = '#000';
       popCtx.clearRect(0,0,popCvs.width,popCvs.height);
       popPaths = [];
     }
-    function closePop(){
-      modal.style.display = 'none';
-    }
-    function popClear(){
-      popCtx.clearRect(0,0,popCvs.width,popCvs.height);
-      popPaths = [];
-    }
+    function closePop(){modal.style.display='none';}
+    function popClear(){popCtx.clearRect(0,0,popCvs.width,popCvs.height);popPaths=[];}
     function popUndo(){
-      if(!popPaths.length) return;
       popPaths.pop();
       popCtx.clearRect(0,0,popCvs.width,popCvs.height);
-      popPaths.forEach(p=>{
-        popCtx.beginPath();
-        popCtx.moveTo(...p[0]);
-        p.forEach(pt=>popCtx.lineTo(...pt));
-        popCtx.stroke();
-      });
+      popPaths.forEach(p=>{popCtx.beginPath();popCtx.moveTo(...p[0]);p.forEach(pt=>popCtx.lineTo(...pt));popCtx.stroke();});
     }
-
-    /* 弹窗鼠标/触摸 */
-    ['mousedown','touchstart'].forEach(e=>popCvs.addEventListener(e,ev=>{
+    function getPos(ev){
+      const rect = ev.target.getBoundingClientRect();
+      return [ev.clientX-rect.left,ev.clientY-rect.top];
+    }
+    /* 统一处理鼠标+触摸 */
+    ['mousedown','touchstart'].forEach(evt=>popCvs.addEventListener(evt,ev=>{
       ev.preventDefault();
-      popDrawing=true;
-      const pos = getPosPop(ev);
-      popPaths.push([pos]);
+      popPaths.push([getPos(ev)]);
     }));
-    ['mousemove','touchmove'].forEach(e=>popCvs.addEventListener(e,ev=>{
-      if(!popDrawing) return;
-      const pos = getPosPop(ev);
-      popPaths[popPaths.length-1].push(pos);
-      popCtx.lineTo(...pos); popCtx.stroke();
+    ['mousemove','touchmove'].forEach(evt=>popCvs.addEventListener(evt,ev=>{
+      if(!popPaths.length) return;
+      ev.preventDefault();
+      popPaths[popPaths.length-1].push(getPos(ev));
+      popCtx.beginPath();popCtx.moveTo(...popPaths[popPaths.length-2]||popPaths[popPaths.length-1][0]);
+      popCtx.lineTo(...getPos(ev));popCtx.stroke();
     }));
-    ['mouseup','touchend'].forEach(e=>window.addEventListener(e,()=>popDrawing=false));
+    ['mouseup','touchend'].forEach(evt=>window.addEventListener(evt,()=>{}));
 
-    function getPosPop(ev){
-      const rect = popCvs.getBoundingClientRect();
-      return [ev.clientX-rect.left, ev.clientY-rect.top];
-    }
-
-    /* ========== 6. 完成签名回填 ========== */
+    /* ========== 完成回填 ========== */
     function finishSign(){
-      // 把弹窗内容转成小图
       const temp = document.createElement('canvas');
-      temp.width = CELL_W; temp.height = CELL_H;
-      temp.getContext('2d').drawImage(popCvs,0,0,popCvs.width,popCvs.height,0,0,CELL_W,CELL_H);
+      temp.width = COL_W; temp.height = ROW_H;
+      temp.getContext('2d').drawImage(popCvs,0,0,popCvs.width,popCvs.height,0,0,COL_W,ROW_H);
       signData[curRow] = temp;
       closePop();
       drawTable();
     }
 
-    /* ========== 7. 一键发送整张表 ========== */
+    /* ========== 点击主画布打开弹窗 ========== */
+    mainCvs.addEventListener('click',ev=>{
+      const rect = mainCvs.getBoundingClientRect();
+      const {x,y} = {x:ev.clientX-rect.left,y:ev.clientY-rect.top};
+      for(let r=0;r<13;r++){
+        const sy = START_Y + r*ROW_H;
+        if(x>=COL_X && x<=COL_X+COL_W && y>=sy && y<=sy+ROW_H){
+          openPop(r);break;
+        }
+      }
+    });
+
+    /* ========== 一键发送 ========== */
     function sendAll(){
-      const img = cvs.toDataURL('image/png');
+      const img = mainCvs.toDataURL('image/png');
       emailjs.init("GzWnI9_DZ731pr1NO");
       emailjs.send("service_ie5vkns", "template_0nerq9o", {
         date: new Date().toLocaleString(),
         image: img
-      }).then(()=>alert("完整签到表已发送到邮箱！"))
+      }).then(()=>alert("完整签到表已发送！"))
         .catch(err=>alert("发送失败："+err));
     }
   </script>
