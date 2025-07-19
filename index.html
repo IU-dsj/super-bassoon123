@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>手写签名板</title>
+  <style>canvas{border:1px solid #999;}</style>
+</head>
+<body>
+  <h2>请在下框签名</h2>
+  <canvas id="c" width="400" height="200"></canvas>
+  <br />
+  <button onclick="save()">保存为图片</button>
+  <a id="dl" style="display:none">下载</a>
+
+  <script>
+    const cvs = document.getElementById('c');
+    const ctx = cvs.getContext('2d');
+    let drawing = false;
+
+    // 鼠标/触摸事件
+    ['mousedown','touchstart'].forEach(e=>cvs.addEventListener(e,ev=>{drawing=true;ctx.beginPath();ctx.moveTo(ev.offsetX||ev.touches[0].clientX-cvs.offsetLeft,ev.offsetY||ev.touches[0].clientY-cvs.offsetTop)}));
+    ['mousemove','touchmove'].forEach(e=>cvs.addEventListener(e,ev=>{if(!drawing)return;ctx.lineTo(ev.offsetX||ev.touches[0].clientX-cvs.offsetLeft,ev.offsetY||ev.touches[0].clientY-cvs.offsetTop);ctx.stroke()}));
+    ['mouseup','touchend'].forEach(e=>window.addEventListener(e,()=>drawing=false));
+
+    function save(){
+      const img = cvs.toDataURL('image/png');
+      document.getElementById('dl').href = img;
+      document.getElementById('dl').download = 'signature.png';
+      document.getElementById('dl').style.display='inline';
+      document.getElementById('dl').click();
+    }
+  </script>
+</body>
+</html>
