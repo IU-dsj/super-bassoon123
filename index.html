@@ -51,11 +51,12 @@
   a.href = img; a.download = 'signature.png'; a.click();
 
   // 2. 发邮件
-  emailjs.init("GzWnI9_DZ731pr1NO");                        // ← 替换
-  emailjs.send("service_ie5vkns", "template_0nerq9o", {      // ← 替换
+  emailjs.init("user_你的PublicKey");                        // ← 替换成你的
+  emailjs.send("service_你的ServiceID", "template_你的TemplateID", { // ← 替换成你的
     date: new Date().toLocaleString(),
     image: img
-  });
+  }).then(()=>console.log("邮件已发送"))
+    .catch(err=>console.error("邮件失败", err));
 }
 
     // 一键清空画布
