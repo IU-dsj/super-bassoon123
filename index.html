@@ -1,4 +1,49 @@
-function save(){
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"/>
+  <title>手写签名板</title>
+  <style>
+    canvas{border:1px solid #999;}
+    button{margin:8px 4px 0 0;}
+  </style>
+</head>
+<body>
+  <h2>请在下框签名</h2>
+  <canvas id="c" width="400" height="200"></canvas>
+  <br/>
+  <button onclick="save()">保存为图片</button>
+  <button onclick="clearCanvas()">重写 / 清空</button>
+  <a id="dl" style="display:none">下载</a>
+
+  <script>
+    const cvs = document.getElementById('c');
+    const ctx = cvs.getContext('2d');
+    let drawing = false;
+
+    /* ---------- 鼠标/触摸事件 ---------- */
+    ['mousedown','touchstart'].forEach(e=>cvs.addEventListener(e, ev=>{
+      ev.preventDefault();
+      drawing = true;
+      ctx.beginPath();
+      const rect = cvs.getBoundingClientRect();
+      const x = (ev.clientX || ev.touches[0].clientX) - rect.left;
+      const y = (ev.clientY || ev.touches[0].clientY) - rect.top;
+      ctx.moveTo(x, y);
+    }));
+    ['mousemove','touchmove'].forEach(e=>cvs.addEventListener(e, ev=>{
+      if(!drawing) return;
+      ev.preventDefault();
+      const rect = cvs.getBoundingClientRect();
+      const x = (ev.clientX || ev.touches[0].clientX) - rect.left;
+      const y = (ev.clientY || ev.touches[0].clientY) - rect.top;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }));
+    ['mouseup','touchend'].forEach(e=>window.addEventListener(e, ()=>drawing=false));
+
+    /* ---------- 功能函数 ---------- */
+    function save(){
   const img = cvs.toDataURL('image/png');
 
   // 1. 让访客下载
@@ -12,3 +57,11 @@ function save(){
     image: img
   });
 }
+
+    // 一键清空画布
+    function clearCanvas(){
+      ctx.clearRect(0, 0, cvs.width, cvs.height);
+    }
+  </script>
+</body>
+</html>
